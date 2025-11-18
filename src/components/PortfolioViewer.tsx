@@ -7,7 +7,6 @@ interface PortfolioViewerProps {
 }
 
 function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
-  const [portfolioData, setPortfolioData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isPitching, setIsPitching] = useState(false)
   const [showConnectPopup, setShowConnectPopup] = useState(false)
@@ -25,10 +24,8 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
     setError('')
     
     try {
-      // Try to fetch the portfolio content
-      // For now, we'll use an iframe to display it
+      // Portfolio will be displayed in iframe
       // In a real app, you might want to use a CORS proxy or backend
-      setPortfolioData({ url: portfolioUrl })
       setIsLoading(false)
       
       // Start pitch immediately - no delay
