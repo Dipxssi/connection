@@ -11,7 +11,6 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isPitching, setIsPitching] = useState(false)
   const [showConnectPopup, setShowConnectPopup] = useState(false)
-  const [pitchText, setPitchText] = useState('')
   const [error, setError] = useState('')
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
@@ -40,7 +39,7 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
     }
   }
 
-  const generatePitch = (data: any): string => {
+  const generatePitch = (): string => {
     // Generate a personalized pitch based on portfolio
     // In a real app, you'd use an AI API here (like OpenAI, Anthropic, etc.)
     let portfolioDomain = 'my portfolio'
@@ -70,8 +69,7 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
   }
 
   const generateAndPitch = () => {
-    const pitch = generatePitch(portfolioData)
-    setPitchText(pitch)
+    const pitch = generatePitch()
     setIsPitching(true)
     speakPitch(pitch)
   }
