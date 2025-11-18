@@ -4,10 +4,9 @@ A beautiful web app that lets you share your portfolio with an AI voice agent th
 
 ## Features
 
-- 📝 Enter your portfolio URL and LinkedIn profile
-- 🎤 AI voice agent automatically pitches your portfolio
-- 🎨 Beautiful, modern UI with smooth animations
-- 🔗 LinkedIn profile display after pitch completion
+-  Enter your portfolio URL and LinkedIn profile
+-  AI voice agent automatically pitches your portfolio
+-  LinkedIn profile display after pitch completion
 
 ## Getting Started
 
@@ -34,13 +33,12 @@ npm run dev
 ## Tech Stack
 
 - React + TypeScript
-- Vite
 - Web Speech API (for voice synthesis)
-- Modern CSS with gradients and animations
+
 
 ## Notes
 
 - The voice pitch uses the browser's built-in Web Speech API
-- For production, consider integrating with advanced AI APIs (OpenAI, Anthropic) for more dynamic pitch generation
+- Later we might you use voice agents 
 - Some portfolio sites may have CORS restrictions when loading in iframes
 
