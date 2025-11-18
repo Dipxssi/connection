@@ -10,6 +10,7 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isPitching, setIsPitching] = useState(false)
   const [showConnectPopup, setShowConnectPopup] = useState(false)
+  const [pitchStarted, setPitchStarted] = useState(false)
   const [error, setError] = useState('')
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
@@ -18,6 +19,9 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
     synthRef.current = window.speechSynthesis
     fetchPortfolio()
   }, [portfolioUrl])
+
+  // Detect if we're on a mobile device
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 
   const fetchPortfolio = async () => {
     setIsLoading(true)
@@ -28,8 +32,16 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
       // In a real app, you might want to use a CORS proxy or backend
       setIsLoading(false)
       
-      // Start pitch immediately - no delay
-      generateAndPitch()
+      // On mobile, always show button (autoplay blocked). On desktop, try auto-start
+      if (!isMobile) {
+        try {
+          generateAndPitch()
+          setPitchStarted(true)
+        } catch (err) {
+          // If auto-start fails, user will need to click the button
+          console.log('Auto-start failed, showing play button')
+        }
+      }
     } catch (err) {
       setError('Failed to load portfolio. Please check the URL.')
       setIsLoading(false)
@@ -68,7 +80,12 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
   const generateAndPitch = () => {
     const pitch = generatePitch()
     setIsPitching(true)
+    setPitchStarted(true)
     speakPitch(pitch)
+  }
+
+  const handleStartPitch = () => {
+    generateAndPitch()
   }
 
   const speakPitch = (text: string) => {
@@ -128,6 +145,11 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
     <div className="portfolio-viewer">
       <div className="viewer-header">
         <h2>My Portfolio</h2>
+        {!pitchStarted && !isPitching && (
+          <button onClick={handleStartPitch} className="play-pitch-button">
+            🔊 Play Portfolio Pitch
+          </button>
+        )}
         {isPitching && (
           <div className="pitch-indicator">
             <span className="pulse"></span>
