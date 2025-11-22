@@ -4,88 +4,97 @@ import './PortfolioViewer.css'
 interface PortfolioViewerProps {
   portfolioUrl: string
   linkedinUrl: string
+  pitchText: string
 }
 
-function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
+function PortfolioViewer({ portfolioUrl, linkedinUrl, pitchText }: PortfolioViewerProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isPitching, setIsPitching] = useState(false)
   const [showConnectPopup, setShowConnectPopup] = useState(false)
   const [pitchStarted, setPitchStarted] = useState(false)
   const [error, setError] = useState('')
+  const [iframeError, setIframeError] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
+  const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    synthRef.current = window.speechSynthesis
+    // Initialize speech synthesis
+    if ('speechSynthesis' in window) {
+      synthRef.current = window.speechSynthesis
+    }
     fetchPortfolio()
-  }, [portfolioUrl])
 
-  // Detect if we're on a mobile device
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    return () => {
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current)
+      }
+    }
+  }, [portfolioUrl])
 
   const fetchPortfolio = async () => {
     setIsLoading(true)
     setError('')
+    setIframeError(false)
     
     try {
-      // Portfolio will be displayed in iframe
-      // In a real app, you might want to use a CORS proxy or backend
-      setIsLoading(false)
-      
-      // On mobile, always show button (autoplay blocked). On desktop, try auto-start
-      if (!isMobile) {
-        try {
-          generateAndPitch()
-          setPitchStarted(true)
-        } catch (err) {
-          // If auto-start fails, user will need to click the button
-          console.log('Auto-start failed, showing play button')
+      // Set a timeout to detect if iframe fails to load (CORS issue)
+      loadTimeoutRef.current = setTimeout(() => {
+        if (iframeRef.current) {
+          try {
+            // Try to access iframe content - will fail if CORS blocked
+            const iframeDoc = iframeRef.current.contentDocument || iframeRef.current.contentWindow?.document
+            if (!iframeDoc) {
+              setIframeError(true)
+              setIsLoading(false)
+            }
+          } catch (e) {
+            // CORS error - iframe blocked
+            setIframeError(true)
+            setIsLoading(false)
+          }
         }
-      }
+      }, 5000) // 5 second timeout
+
+      setIsLoading(false)
     } catch (err) {
       setError('Failed to load portfolio. Please check the URL.')
       setIsLoading(false)
     }
   }
 
-  const generatePitch = (): string => {
-    // Generate a personalized pitch based on portfolio
-    // In a real app, you'd use an AI API here (like OpenAI, Anthropic, etc.)
-    let portfolioDomain = 'my portfolio'
-    try {
-      portfolioDomain = new URL(portfolioUrl).hostname.replace('www.', '')
-    } catch (e) {
-      // If URL parsing fails, use default
+  const handleIframeLoad = () => {
+    if (loadTimeoutRef.current) {
+      clearTimeout(loadTimeoutRef.current)
+      loadTimeoutRef.current = null
     }
-    
-    const pitch = `
-      Hello! Welcome to my portfolio at ${portfolioDomain}. I'm thrilled to have you here!
-      
-      This portfolio represents my journey, showcasing the projects I'm most passionate about, 
-      the skills I've developed, and the impact I've made. Each piece tells a story of 
-      problem-solving, creativity, and dedication.
-      
-      As you explore the content below, you'll see examples of my work that demonstrate 
-      my technical expertise and creative approach. I believe in building solutions that 
-      not only work well but also make a meaningful difference.
-      
-      I'd love to connect and learn more about you too! After you've had a chance to 
-      review my work, please check out my LinkedIn profile to continue our conversation.
-      
-      Thank you for taking the time to explore my portfolio. Let's connect!
-    `
-    return pitch.trim()
+    setIsLoading(false)
+    setIframeError(false)
   }
 
-  const generateAndPitch = () => {
-    const pitch = generatePitch()
-    setIsPitching(true)
-    setPitchStarted(true)
-    speakPitch(pitch)
+  const handleIframeError = () => {
+    if (loadTimeoutRef.current) {
+      clearTimeout(loadTimeoutRef.current)
+      loadTimeoutRef.current = null
+    }
+    setIframeError(true)
+    setIsLoading(false)
   }
 
   const handleStartPitch = () => {
-    generateAndPitch()
+    if (!pitchText || !pitchText.trim()) {
+      console.error('No pitch text available')
+      return
+    }
+    
+    if (!synthRef.current) {
+      console.error('Speech synthesis not available')
+      return
+    }
+
+    setIsPitching(true)
+    setPitchStarted(true)
+    speakPitch(pitchText)
   }
 
   const speakPitch = (text: string) => {
@@ -106,7 +115,8 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
       }, 1000)
     }
 
-    utterance.onerror = () => {
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event)
       setIsPitching(false)
       // If speech fails, still show popup
       setTimeout(() => {
@@ -136,7 +146,51 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
   if (error) {
     return (
       <div className="portfolio-viewer">
-        <div className="error">{error}</div>
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <h2>Error Loading Portfolio</h2>
+          <p className="error-message">{error}</p>
+          <button 
+            onClick={() => window.location.href = window.location.pathname}
+            className="error-button"
+            aria-label="Return to home page"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (iframeError) {
+    return (
+      <div className="portfolio-viewer">
+        <div className="error-container">
+          <div className="error-icon">🔒</div>
+          <h2>Portfolio Cannot Be Embedded</h2>
+          <p className="error-message">
+            This portfolio website has security restrictions that prevent it from being displayed in an iframe. 
+            This is a common security feature called X-Frame-Options.
+          </p>
+          <div className="error-actions">
+            <a 
+              href={portfolioUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="error-button primary"
+              aria-label="Open portfolio in new tab"
+            >
+              Open Portfolio in New Tab
+            </a>
+            <button 
+              onClick={() => window.location.href = window.location.pathname}
+              className="error-button"
+              aria-label="Return to home page"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -146,35 +200,53 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
       <div className="viewer-header">
         <h2>My Portfolio</h2>
         {!pitchStarted && !isPitching && (
-          <button onClick={handleStartPitch} className="play-pitch-button">
+          <button 
+            onClick={handleStartPitch} 
+            className="play-pitch-button"
+            aria-label="Play portfolio pitch with voice"
+          >
             🔊 Play Portfolio Pitch
           </button>
         )}
         {isPitching && (
-          <div className="pitch-indicator">
-            <span className="pulse"></span>
-            <span>AI is pitching...</span>
-            <button onClick={stopPitch} className="stop-button">Skip</button>
+          <div className="pitch-indicator" role="status" aria-live="polite">
+            <span className="pulse" aria-hidden="true"></span>
+            <span>Voice is pitching...</span>
+            <button 
+              onClick={stopPitch} 
+              className="stop-button"
+              aria-label="Stop and skip pitch"
+            >
+              Skip
+            </button>
           </div>
         )}
       </div>
       
       {showConnectPopup && (
-        <div className="connect-popup-overlay" onClick={() => setShowConnectPopup(false)}>
+        <div 
+          className="connect-popup-overlay" 
+          onClick={() => setShowConnectPopup(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="connect-popup-title"
+        >
           <div className="connect-popup" onClick={(e) => e.stopPropagation()}>
-            <h3>Let's Connect!</h3>
+            <h3 id="connect-popup-title">Let's Connect!</h3>
             <p>I'd love to connect with you on LinkedIn</p>
             <a 
               href={linkedinUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="connect-button"
+              aria-label="Connect on LinkedIn (opens in new tab)"
             >
               Connect on LinkedIn
             </a>
             <button 
               className="close-popup-button"
               onClick={() => setShowConnectPopup(false)}
+              aria-label="Close popup and continue browsing"
             >
               Continue Browsing
             </button>
@@ -189,6 +261,9 @@ function PortfolioViewer({ portfolioUrl, linkedinUrl }: PortfolioViewerProps) {
           className="portfolio-iframe"
           title="Portfolio"
           sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+          onLoad={handleIframeLoad}
+          onError={handleIframeError}
+          aria-label="Portfolio website"
         />
       </div>
     </div>
