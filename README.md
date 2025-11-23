@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/b584bf9c-ba02-4a05-9b39-3a2b65f9314c
+
 # Connection - Portfolio Pitch App
 
 A web app that lets you share your portfolio with a voice pitch that presents your work to viewers, ending with your LinkedIn profile.
@@ -71,4 +75,5 @@ npm run dev
 ## License
 
 MIT
+
 
